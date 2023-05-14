@@ -81,3 +81,39 @@ def reorder(myPoints):
     # print(diff)
 
     return myPointsNew
+
+
+def splitBoxes(img):
+    rows = np.vsplit(img, 5)
+    boxes = []
+
+    for r in rows:
+        cols = np.hsplit(r, 5)
+        for box in cols:
+            boxes.append(box)
+            # cv2.imshow("Split", box)
+
+    return boxes
+
+
+# used 3lshan a show el answers
+def showAnswers(img, myIndex, grading, ans, questions, choices):
+    secW = int(img.shape[1] / questions)
+    secH = int(img.shape[0] / choices)
+
+    for x in range(0, questions):
+        myAns = myIndex[x]
+        cX = (myAns * secW) + secW // 2  # finding the center value of the given box
+        cY = (x * secH) + secH // 2
+        if grading[x] == 1:
+            myColor = (0, 255, 0)
+        else:
+            myColor = (0, 0 , 255)
+            correctAns = ans[x]
+            correctX = (correctAns * secW) + secW // 2  # finding the center value of the given box
+            correctY = (x * secH) + secH // 2
+            cv2.circle(img, (correctX, correctY), 30, (0,255,0), cv2.FILLED)
+
+        cv2.circle(img, (cX, cY), 50, myColor, cv2.FILLED)
+
+    return img
