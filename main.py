@@ -1,6 +1,15 @@
 import cv2
 import numpy as np
 import utils
+import pandas as pd
+
+import csv
+
+# set up input and output file paths
+file_path = 'test.csv'
+headers = ['ID', 'Score']
+
+# add data to the rows
 
 ###########
 path = "CaptureID.JPG"
@@ -12,7 +21,7 @@ widthImg = 700
 heightImg = 700
 questions = 10
 choices = 5
-# ans = [1, 2, 0, 1, 4]
+id_eol = [1, 2, 0, 1, 4, 1, 2, 3, 2, 0]
 webCamFeed = True
 cameraNo = 0
 #####################
@@ -41,6 +50,7 @@ def getAnswers(path, widthImg, heightImg):
     rectConA = utils.rectCountour(countoursA)  # find us the biggest box
     biggestCountorA = utils.getCornerPoints(rectConA[0])  # get us the corner points of the biggest box
     gradePointsA = utils.getCornerPoints(rectConA[2])
+
     # namePoints = utils.getCornerPoints(rectCon[2])
     # this draws the countors of 2 biggest boxes
     if biggestCountorA.size != 0 and gradePointsA.size != 0:
@@ -103,6 +113,7 @@ while True:
     imageCountours = img.copy()
     imageBiggestCountours = img.copy()
     imgFinal = img.copy()
+    imgFinal_ID = img.copy()
     imgGrey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # makes image grey
     imgBlur = cv2.GaussianBlur(imgGrey, (5, 5), 1)  # makes image blur
     imgCanny = cv2.Canny(imgBlur, 10, 50)  # makes image canny
@@ -116,8 +127,8 @@ while True:
         # Finding rectangles
         rectCon = utils.rectCountour(countours)  # find us the biggest box
         biggestCountor = utils.getCornerPoints(rectCon[0])  # get us the corner points of the biggest box
+        idBox = utils.getCornerPoints(rectCon[1])
         gradePoints = utils.getCornerPoints(rectCon[2])
-        # idBox = utils.getCornerPoints(rectCon[1])
 
         # print(biggestCountor)
 
@@ -125,12 +136,11 @@ while True:
         if biggestCountor.size != 0 and gradePoints.size != 0:
             cv2.drawContours(imageBiggestCountours, biggestCountor, -1, (0, 255, 0), 20)
             cv2.drawContours(imageBiggestCountours, gradePoints, -1, (0, 0, 255), 20)
-            # cv2.drawContours(imageBiggestCountours, idBox, -1, (255, 0,0 ), 20)
-
+            cv2.drawContours(imageBiggestCountours, idBox, -1, (255, 0, 0), 20)
 
             biggestCountor = utils.reorder(biggestCountor)
             gradePoints = utils.reorder(gradePoints)
-            # idBox = utils.reorder(idBox)
+            idBox = utils.reorder(idBox)
 
             # for the mcqs
             pt1 = np.float32(biggestCountor)
@@ -145,28 +155,27 @@ while True:
             imageGradeDisplay = cv2.warpPerspective(img, matrixG, (325, 150))
 
             # for the id
-            # id1 = np.float32(idBox)
-            # id2 = np.float32([[0, 0], [325, 0], [0, 150], [325, 150]])
-            # matrixID = cv2.getPerspectiveTransform(id1, id2)
-            # imageID = cv2.warpPerspective(img, matrixID, (325, 150))
+            id1 = np.float32(idBox)
+            id2 = np.float32([[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]])
+            matrixID = cv2.getPerspectiveTransform(id1, id2)
+            imageID = cv2.warpPerspective(img, matrixID, (widthImg, heightImg))
 
             # Applying threshold (byshoof el marked spots)
             imgWarpGray = cv2.cvtColor(imageWarpColored, cv2.COLOR_BGR2GRAY)
             imgThresh = cv2.threshold(imgWarpGray, 180, 225, cv2.THRESH_BINARY_INV)[1]
 
+            imgWarpGray_ID = cv2.cvtColor(imageID, cv2.COLOR_BGR2GRAY)
+            imgThresh_ID = cv2.threshold(imgWarpGray_ID, 180, 225, cv2.THRESH_BINARY_INV)[1]
+
             boxes = utils.splitBoxes(imgThresh, questions, choices)
-            # idsBoxes = utils.splitIDBoxes(imgThresh, rows, columns)
-            # print(cv2.countNonZero(boxes[1]))
+            idsBoxes = utils.splitIDBoxes(imgThresh_ID, rows, columns)
+            # print(cv2.countNonZero(idsBoxes[1]))
 
             # getting non zero pixel values of each box
             # btgebly el value bta3 el shaded parts, law heya shaded el value byb2a higher
             myPixelVal = np.zeros((questions, choices))
             countC = 0
             countR = 0
-            #
-            # myIDVal = np.zeros((rows, columns))
-            # countC_ID = 0
-            # countR_ID = 0
 
             for image in boxes:
                 totalPixels = cv2.countNonZero(image)
@@ -175,32 +184,37 @@ while True:
                 if countC == choices:
                     countR += 1
                     countC = 0
-
-            # print(myPixelVal)
-            # for ids in idsBoxes:
-            #     totalPixels = cv2.countNonZero(ids)
-            #     myIDVal[countR_ID][countC_ID] = totalPixels
-            #     countC_ID += 1
-            #     if countC_ID == columns:
-            #         countR_ID += 1
-            #         countC_ID = 0
-
             # el function deh bt7dd el answers ely mtzlla
-
             # Finding index values of the markings
             myIndex = []
             for x in range(0, questions):
                 arr = myPixelVal[x]
                 myIndexVal = np.where(arr == np.amax(arr))
                 myIndex.append(myIndexVal[0][0])
+            #
+            # # Finding ids
+            myIDVal = np.zeros((rows, columns))
+            countC_ID = 0
+            countR_ID = 0
+            #
+            for ids in idsBoxes:
+                totalPixels_id = cv2.countNonZero(ids)
+                myIDVal[countR_ID][countC_ID] = totalPixels_id
+                countR_ID += 1
+                if countR_ID == rows:
+                    countC_ID += 1
+                    countR_ID = 0
+            #
 
-            # Finding ids
-            # myIndex_ID = []
-            # for x_ID in range(0, columns):
-            #     arr_ID = myIDVal[x_ID]
-            #     myIndexVal_ID = np.where(arr_ID == np.amax(arr_ID))
-            #     myIndex_ID.append(myIndexVal_ID[0][0])
-
+            #
+            #
+            # grading_ID = []
+            # for i_id in range(0, rows):
+            #     if id_eol[i_id] == myIndex_ID[i_id]:
+            #         grading_ID.append(1)
+            #     else:
+            #         grading_ID.append(0)
+            # # print(grading_ID)
 
             # Grading, 3lshan ashoof el egabat ely sa7
             grading = []
@@ -210,29 +224,47 @@ while True:
                 else:
                     grading.append(0)
             # print(grading)
+            myIndex_ID = []
 
 
             score = (sum(grading) / questions) * 100  # Final grade
             print(score)
 
+            for x_ID in range(0, columns):
+                arr_ID = myIDVal[x_ID]
+                myIndexVal_ID = np.where(arr_ID == np.amax(arr_ID))
+                myIndex_ID.append(myIndexVal_ID[0][0])
+            print(myIndex_ID)
+
+            if myIndex_ID[0] != 0 and myIndex_ID[1] != 0 and myIndex_ID[2] != 0 and myIndex_ID[3] != 0 and myIndex_ID[4] != 0:
+                rows = [
+                    [str(myIndex_ID[0]) + str(myIndex_ID[1]) + str(myIndex_ID[2]) + str(myIndex_ID[3]) + str(myIndex_ID[4]),score]]
+
+                # write the rows to the CSV file
+                with open(file_path, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(headers)
+                    writer.writerows(rows)
+
+
             imageResults = imageWarpColored.copy()
-            ## imageResultsID = imageWarpColored.copy()
+            imageResultsID = imageID.copy()
             # Displaying answers
             imageResults = utils.showAnswers(imageResults, myIndex, grading, ans, questions, choices)
-            ## imageResultsID = utils.showAnswers(imageResultsID, myIndex_ID, grading, ans, questions, choices)
-
+            # imageResultsID = utils.showAnswers(imageResultsID, myIndex_ID, grading_ID, id_eol, rows, columns)
 
             imageRawDrawing = np.zeros_like(imageWarpColored)
-            imageRawDrawing = utils.showAnswers(imageRawDrawing, myIndex, grading, ans, questions,choices)  # b5ly el black screen 3aleha el egabat
+            imageRawDrawing = utils.showAnswers(imageRawDrawing, myIndex, grading, ans, questions,
+                                                choices)  # b5ly el black screen 3aleha el egabat
 
-            ## imageRawDrawingID = np.zeros_like(imageWarpColored)
-            ## imageRawDrawingID = utils.showAnswers(imageRawDrawingID, myIndex_ID, grading, ans, questions, choices)
+            # imageRawDrawingID = np.zeros_like(imageID)
+            # imageRawDrawingID = utils.showAnswers(imageRawDrawingID, myIndex_ID, grading_ID, id_eol, rows, columns)
             # Ha7ot el final egabat, feh awal sora 5ales
             Invmatrix = cv2.getPerspectiveTransform(pt2, pt1)
             ImageInvWarp = cv2.warpPerspective(imageRawDrawing, Invmatrix, (widthImg, heightImg))
 
-            ## Invmatrix_ID = cv2.getPerspectiveTransform(id2,id1 )
-            ## ImageInvWarp_ID = cv2.warpPerspective(imageRawDrawingID, Invmatrix_ID, (widthImg, heightImg))
+            # Invmatrix_ID = cv2.getPerspectiveTransform(id2, id1)
+            # ImageInvWarp_ID = cv2.warpPerspective(imageRawDrawingID, Invmatrix_ID, (widthImg, heightImg))
 
             # hazwed el grade
             imageRawGrade = np.zeros_like(imageGradeDisplay)
@@ -242,16 +274,16 @@ while True:
 
             imgFinal = cv2.addWeighted(imgFinal, 1, ImageInvWarp, 1, 0)
             imgFinal = cv2.addWeighted(imgFinal, 1, imgInvGradeDisplay, 1, 0)
-            #
-            ## imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, ImageInvWarp_ID, 1, 0)
-            ## imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, imgInvGradeDisplay, 1, 0)
+            # imgFinal = cv2.addWeighted(imgFinal, 1, ImageInvWarp_ID, 1, 0)
 
+            #
+            # imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, ImageInvWarp_ID, 1, 0)
+            # imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, imgInvGradeDisplay, 1, 0)
 
         imgBlank = np.zeros_like(img)
         imageArray = (
             [img, imgGrey, imgBlur, imgCanny], [imageCountours, imageBiggestCountours, imageWarpColored, imgThresh]
             , [imageResults, imageRawDrawing, ImageInvWarp, imgFinal])
-        # ,[imgFinal_ID,imgBlank,imgBlank,imgBlank])
     except:
         imgBlank = np.zeros_like(img)
         imageArray = ([img, imgGrey, imgBlur, imgCanny], [imgBlank, imgBlank, imgBlank, imgBlank]
