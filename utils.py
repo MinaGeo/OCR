@@ -83,23 +83,34 @@ def reorder(myPoints):
     return myPointsNew
 
 
-def splitBoxes(img):
-    rows = np.vsplit(img, 5)
+def splitBoxes(img, questions, choices):
+    rows = np.vsplit(img, questions)
     boxes = []
 
     for r in rows:
-        cols = np.hsplit(r, 5)
+        cols = np.hsplit(r, choices)
         for box in cols:
             boxes.append(box)
             # cv2.imshow("Split", box)
 
     return boxes
 
+def splitIDBoxes(img, rows, columns):
+    rows = np.hsplit(img, columns)
+    boxes = []
+
+    for r in rows:
+        cols = np.vsplit(r, rows)
+        for box in cols:
+            boxes.append(box)
+            # cv2.imshow("Split", box)
+
+    return boxes
 
 # used 3lshan a show el answers
 def showAnswers(img, myIndex, grading, ans, questions, choices):
-    secW = int(img.shape[1] / questions)
-    secH = int(img.shape[0] / choices)
+    secW = int(img.shape[1] / choices)
+    secH = int(img.shape[0] / questions)
 
     for x in range(0, questions):
         myAns = myIndex[x]

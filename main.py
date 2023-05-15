@@ -3,14 +3,16 @@ import numpy as np
 import utils
 
 ###########
-path = "1.jpg"
+path = "CaptureID.JPG"
 
 ############
+rows = 10
+columns = 5
 widthImg = 700
 heightImg = 700
-questions = 5
+questions = 10
 choices = 5
-ans = [1, 2, 0, 1, 4]
+# ans = [1, 2, 0, 1, 4]
 webCamFeed = True
 cameraNo = 0
 #####################
@@ -18,6 +20,77 @@ cameraNo = 0
 # setting up the camera
 cap = cv2.VideoCapture(cameraNo)
 cap.set(10, 150)
+
+
+def getAnswers(path, widthImg, heightImg):
+    imgA = cv2.imread(path)
+    # Image preprocessing
+    imageCountoursA = imgA.copy()
+    imageBiggestCountoursA = imgA.copy()
+    imgGreyA = cv2.cvtColor(imgA, cv2.COLOR_BGR2GRAY)  # makes image grey
+    imgBlurA = cv2.GaussianBlur(imgGreyA, (5, 5), 1)  # makes image blur
+    imgCannyA = cv2.Canny(imgBlurA, 10, 50)  # makes image canny
+
+    # Image preprocessing
+
+    # Defining all countours
+    countoursA, hierarchyA = cv2.findContours(imgCannyA, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(imageCountoursA, countoursA, -1, (0, 255, 0), 10)
+
+    # Finding rectangles
+    rectConA = utils.rectCountour(countoursA)  # find us the biggest box
+    biggestCountorA = utils.getCornerPoints(rectConA[0])  # get us the corner points of the biggest box
+    gradePointsA = utils.getCornerPoints(rectConA[2])
+    # namePoints = utils.getCornerPoints(rectCon[2])
+    # this draws the countors of 2 biggest boxes
+    if biggestCountorA.size != 0 and gradePointsA.size != 0:
+        cv2.drawContours(imageBiggestCountoursA, biggestCountorA, -1, (0, 255, 0), 20)
+        cv2.drawContours(imageBiggestCountoursA, gradePointsA, -1, (0, 0, 255), 20)
+
+        biggestCountorA = utils.reorder(biggestCountorA)
+        gradePointsA = utils.reorder(gradePointsA)
+
+        # for the mcqs
+        pt1A = np.float32(biggestCountorA)
+        pt2A = np.float32([[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]])
+        matrixA = cv2.getPerspectiveTransform(pt1A, pt2A)
+        imageWarpColoredA = cv2.warpPerspective(imgA, matrixA, (widthImg, heightImg))
+
+        # for the grades
+        ptG1A = np.float32(gradePointsA)
+        ptG2A = np.float32([[0, 0], [325, 0], [0, 150], [325, 150]])
+        matrixGA = cv2.getPerspectiveTransform(ptG1A, ptG2A)
+        imageGradeDisplayA = cv2.warpPerspective(imgA, matrixGA, (325, 150))
+        # cv2.imshow("Grade",imageGradeDisplay)
+
+        # Applying threshold (byshoof el marked spots)
+        imgWarpGrayA = cv2.cvtColor(imageWarpColoredA, cv2.COLOR_BGR2GRAY)
+        imgThreshA = cv2.threshold(imgWarpGrayA, 180, 225, cv2.THRESH_BINARY_INV)[1]
+
+        boxesA = utils.splitBoxes(imgThreshA, questions, choices)
+        myPixelValA = np.zeros((questions, choices))
+        countCA = 0
+        countRA = 0
+
+        for imageA in boxesA:
+            totalPixelsA = cv2.countNonZero(imageA)
+            myPixelValA[countRA][countCA] = totalPixelsA
+            countCA += 1
+            if countCA == choices:
+                countRA += 1
+                countCA = 0
+            # print(myPixelVal)
+            # el function deh bt7dd el answers ely mtzlla
+            answers = []
+        for xA in range(0, questions):
+            arrA = myPixelValA[xA]
+            myIndexValA = np.where(arrA == np.amax(arrA))
+            answers.append(myIndexValA[0][0])
+        print(answers)
+        return answers
+
+
+ans = getAnswers(path, widthImg, heightImg)
 
 while True:
     if webCamFeed:
@@ -43,8 +116,8 @@ while True:
         # Finding rectangles
         rectCon = utils.rectCountour(countours)  # find us the biggest box
         biggestCountor = utils.getCornerPoints(rectCon[0])  # get us the corner points of the biggest box
-        gradePoints = utils.getCornerPoints(rectCon[1])
-        # namePoints = utils.getCornerPoints(rectCon[2])
+        gradePoints = utils.getCornerPoints(rectCon[2])
+        # idBox = utils.getCornerPoints(rectCon[1])
 
         # print(biggestCountor)
 
@@ -52,9 +125,12 @@ while True:
         if biggestCountor.size != 0 and gradePoints.size != 0:
             cv2.drawContours(imageBiggestCountours, biggestCountor, -1, (0, 255, 0), 20)
             cv2.drawContours(imageBiggestCountours, gradePoints, -1, (0, 0, 255), 20)
+            # cv2.drawContours(imageBiggestCountours, idBox, -1, (255, 0,0 ), 20)
+
 
             biggestCountor = utils.reorder(biggestCountor)
             gradePoints = utils.reorder(gradePoints)
+            # idBox = utils.reorder(idBox)
 
             # for the mcqs
             pt1 = np.float32(biggestCountor)
@@ -67,13 +143,19 @@ while True:
             ptG2 = np.float32([[0, 0], [325, 0], [0, 150], [325, 150]])
             matrixG = cv2.getPerspectiveTransform(ptG1, ptG2)
             imageGradeDisplay = cv2.warpPerspective(img, matrixG, (325, 150))
-            # cv2.imshow("Grade",imageGradeDisplay)
+
+            # for the id
+            # id1 = np.float32(idBox)
+            # id2 = np.float32([[0, 0], [325, 0], [0, 150], [325, 150]])
+            # matrixID = cv2.getPerspectiveTransform(id1, id2)
+            # imageID = cv2.warpPerspective(img, matrixID, (325, 150))
 
             # Applying threshold (byshoof el marked spots)
             imgWarpGray = cv2.cvtColor(imageWarpColored, cv2.COLOR_BGR2GRAY)
             imgThresh = cv2.threshold(imgWarpGray, 180, 225, cv2.THRESH_BINARY_INV)[1]
 
-            boxes = utils.splitBoxes(imgThresh)
+            boxes = utils.splitBoxes(imgThresh, questions, choices)
+            # idsBoxes = utils.splitIDBoxes(imgThresh, rows, columns)
             # print(cv2.countNonZero(boxes[1]))
 
             # getting non zero pixel values of each box
@@ -81,6 +163,10 @@ while True:
             myPixelVal = np.zeros((questions, choices))
             countC = 0
             countR = 0
+            #
+            # myIDVal = np.zeros((rows, columns))
+            # countC_ID = 0
+            # countR_ID = 0
 
             for image in boxes:
                 totalPixels = cv2.countNonZero(image)
@@ -89,7 +175,15 @@ while True:
                 if countC == choices:
                     countR += 1
                     countC = 0
+
             # print(myPixelVal)
+            # for ids in idsBoxes:
+            #     totalPixels = cv2.countNonZero(ids)
+            #     myIDVal[countR_ID][countC_ID] = totalPixels
+            #     countC_ID += 1
+            #     if countC_ID == columns:
+            #         countR_ID += 1
+            #         countC_ID = 0
 
             # el function deh bt7dd el answers ely mtzlla
 
@@ -99,6 +193,13 @@ while True:
                 arr = myPixelVal[x]
                 myIndexVal = np.where(arr == np.amax(arr))
                 myIndex.append(myIndexVal[0][0])
+
+            # Finding ids
+            # myIndex_ID = []
+            # for x_ID in range(0, columns):
+            #     arr_ID = myIDVal[x_ID]
+            #     myIndexVal_ID = np.where(arr_ID == np.amax(arr_ID))
+            #     myIndex_ID.append(myIndexVal_ID[0][0])
 
 
             # Grading, 3lshan ashoof el egabat ely sa7
@@ -110,21 +211,28 @@ while True:
                     grading.append(0)
             # print(grading)
 
+
             score = (sum(grading) / questions) * 100  # Final grade
             print(score)
 
             imageResults = imageWarpColored.copy()
+            ## imageResultsID = imageWarpColored.copy()
             # Displaying answers
             imageResults = utils.showAnswers(imageResults, myIndex, grading, ans, questions, choices)
-            imageRawDrawing = np.zeros_like(imageWarpColored)
-            imageRawDrawing = utils.showAnswers(imageRawDrawing, myIndex, grading, ans, questions,
-                                                choices)  # b5ly el black screen 3aleha el egabat
+            ## imageResultsID = utils.showAnswers(imageResultsID, myIndex_ID, grading, ans, questions, choices)
 
+
+            imageRawDrawing = np.zeros_like(imageWarpColored)
+            imageRawDrawing = utils.showAnswers(imageRawDrawing, myIndex, grading, ans, questions,choices)  # b5ly el black screen 3aleha el egabat
+
+            ## imageRawDrawingID = np.zeros_like(imageWarpColored)
+            ## imageRawDrawingID = utils.showAnswers(imageRawDrawingID, myIndex_ID, grading, ans, questions, choices)
             # Ha7ot el final egabat, feh awal sora 5ales
             Invmatrix = cv2.getPerspectiveTransform(pt2, pt1)
             ImageInvWarp = cv2.warpPerspective(imageRawDrawing, Invmatrix, (widthImg, heightImg))
 
-
+            ## Invmatrix_ID = cv2.getPerspectiveTransform(id2,id1 )
+            ## ImageInvWarp_ID = cv2.warpPerspective(imageRawDrawingID, Invmatrix_ID, (widthImg, heightImg))
 
             # hazwed el grade
             imageRawGrade = np.zeros_like(imageGradeDisplay)
@@ -134,11 +242,16 @@ while True:
 
             imgFinal = cv2.addWeighted(imgFinal, 1, ImageInvWarp, 1, 0)
             imgFinal = cv2.addWeighted(imgFinal, 1, imgInvGradeDisplay, 1, 0)
+            #
+            ## imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, ImageInvWarp_ID, 1, 0)
+            ## imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, imgInvGradeDisplay, 1, 0)
+
 
         imgBlank = np.zeros_like(img)
         imageArray = (
-        [img, imgGrey, imgBlur, imgCanny], [imageCountours, imageBiggestCountours, imageWarpColored, imgThresh]
-        , [imageResults, imageRawDrawing, ImageInvWarp, imgFinal])
+            [img, imgGrey, imgBlur, imgCanny], [imageCountours, imageBiggestCountours, imageWarpColored, imgThresh]
+            , [imageResults, imageRawDrawing, ImageInvWarp, imgFinal])
+        # ,[imgFinal_ID,imgBlank,imgBlank,imgBlank])
     except:
         imgBlank = np.zeros_like(img)
         imageArray = ([img, imgGrey, imgBlur, imgCanny], [imgBlank, imgBlank, imgBlank, imgBlank]
