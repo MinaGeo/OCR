@@ -104,7 +104,7 @@ def splitIDBoxes(img, rows_s, columns):
         rows = np.vsplit(c, rows_s)
         for box in rows:
             boxes.append(box)
-            cv2.imshow("Split", box)
+            # cv2.imshow("Split", box)
 
     return boxes
 

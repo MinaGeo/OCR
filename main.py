@@ -24,6 +24,7 @@ choices = 5
 id_eol = [1, 2, 0, 1, 4, 1, 2, 3, 2, 0]
 webCamFeed = True
 cameraNo = 0
+
 #####################
 
 # setting up the camera
@@ -102,7 +103,9 @@ def getAnswers(path, widthImg, heightImg):
 
 ans = getAnswers(path, widthImg, heightImg)
 
+
 while True:
+
     if webCamFeed:
         success, img = cap.read()
     else:
@@ -236,15 +239,7 @@ while True:
                 myIndex_ID.append(myIndexVal_ID[0][0])
             print(myIndex_ID)
 
-            if myIndex_ID[0] != 0 and myIndex_ID[1] != 0 and myIndex_ID[2] != 0 and myIndex_ID[3] != 0 and myIndex_ID[4] != 0:
-                rows = [
-                    [str(myIndex_ID[0]) + str(myIndex_ID[1]) + str(myIndex_ID[2]) + str(myIndex_ID[3]) + str(myIndex_ID[4]),score]]
 
-                # write the rows to the CSV file
-                with open(file_path, 'w', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(headers)
-                    writer.writerows(rows)
 
 
             imageResults = imageWarpColored.copy()
@@ -291,9 +286,21 @@ while True:
 
     labels = [["Original", "Grey", "Blur", "Canny"], ["Contours", "Biggest Con", "Warp",
                                                       "Threshold"], ["Result", "Raw Drawing", "Inv Warp", "Final"]]
-    imageStacked = utils.stackImages(imageArray, 0.4)
+    # imageStacked = utils.stackImages(imageArray, 0.4)
     cv2.imshow("FinalResult", imgFinal)
-    cv2.imshow("Stacked Images", imageStacked)
+    # cv2.imshow("Stacked Images", imageStacked)
     if cv2.waitKey(1) & 0xFF == ord('s'):
+
+            # get input values for id and score
+            # create a list of rows to append to the CSV file
+        rowsCSV = [
+                [str(myIndex_ID[0]) + str(myIndex_ID[1]) + str(myIndex_ID[2]) + str(myIndex_ID[3]) + str(myIndex_ID[4]),
+                 score]]
+
+            # append the rows to the CSV file
+        with open(file_path, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(rowsCSV)
+
         cv2.imwrite("FinalResult.jpg", imgFinal)
         cv2.waitKey(300)
