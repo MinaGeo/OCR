@@ -61,7 +61,7 @@ def rectCountour(countours):
 # we use this to get corner points :thumbsup:
 def getCornerPoints(cont):
     perimeter = cv2.arcLength(cont, True)
-    approximation = cv2.approxPolyDP(cont, 0.02 * perimeter, True)
+    approximation = cv2.approxPolyDP(cont, 0.03 * perimeter, True)
     return approximation
 
 

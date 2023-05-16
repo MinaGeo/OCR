@@ -103,7 +103,6 @@ def getAnswers(path, widthImg, heightImg):
 
 ans = getAnswers(path, widthImg, heightImg)
 
-
 while True:
 
     if webCamFeed:
@@ -200,24 +199,7 @@ while True:
             countC_ID = 0
             countR_ID = 0
             #
-            for ids in idsBoxes:
-                totalPixels_id = cv2.countNonZero(ids)
-                myIDVal[countR_ID][countC_ID] = totalPixels_id
-                countR_ID += 1
-                if countR_ID == rows:
-                    countC_ID += 1
-                    countR_ID = 0
-            #
 
-            #
-            #
-            # grading_ID = []
-            # for i_id in range(0, rows):
-            #     if id_eol[i_id] == myIndex_ID[i_id]:
-            #         grading_ID.append(1)
-            #     else:
-            #         grading_ID.append(0)
-            # # print(grading_ID)
 
             # Grading, 3lshan ashoof el egabat ely sa7
             grading = []
@@ -228,10 +210,15 @@ while True:
                     grading.append(0)
             # print(grading)
             myIndex_ID = []
-
-
             score = (sum(grading) / questions) * 100  # Final grade
             print(score)
+            for ids in idsBoxes:
+                totalPixels_id = cv2.countNonZero(ids)
+                myIDVal[countR_ID][countC_ID] = totalPixels_id
+                countR_ID += 1
+                if countR_ID == rows:
+                    countC_ID += 1
+                    countR_ID = 0
 
             for x_ID in range(0, columns):
                 arr_ID = myIDVal[x_ID]
@@ -239,27 +226,18 @@ while True:
                 myIndex_ID.append(myIndexVal_ID[0][0])
             print(myIndex_ID)
 
-
-
-
             imageResults = imageWarpColored.copy()
-            imageResultsID = imageID.copy()
+           # imageResultsID = imageID.copy()
             # Displaying answers
             imageResults = utils.showAnswers(imageResults, myIndex, grading, ans, questions, choices)
-            # imageResultsID = utils.showAnswers(imageResultsID, myIndex_ID, grading_ID, id_eol, rows, columns)
 
             imageRawDrawing = np.zeros_like(imageWarpColored)
             imageRawDrawing = utils.showAnswers(imageRawDrawing, myIndex, grading, ans, questions,
                                                 choices)  # b5ly el black screen 3aleha el egabat
 
-            # imageRawDrawingID = np.zeros_like(imageID)
-            # imageRawDrawingID = utils.showAnswers(imageRawDrawingID, myIndex_ID, grading_ID, id_eol, rows, columns)
             # Ha7ot el final egabat, feh awal sora 5ales
             Invmatrix = cv2.getPerspectiveTransform(pt2, pt1)
             ImageInvWarp = cv2.warpPerspective(imageRawDrawing, Invmatrix, (widthImg, heightImg))
-
-            # Invmatrix_ID = cv2.getPerspectiveTransform(id2, id1)
-            # ImageInvWarp_ID = cv2.warpPerspective(imageRawDrawingID, Invmatrix_ID, (widthImg, heightImg))
 
             # hazwed el grade
             imageRawGrade = np.zeros_like(imageGradeDisplay)
@@ -269,11 +247,6 @@ while True:
 
             imgFinal = cv2.addWeighted(imgFinal, 1, ImageInvWarp, 1, 0)
             imgFinal = cv2.addWeighted(imgFinal, 1, imgInvGradeDisplay, 1, 0)
-            # imgFinal = cv2.addWeighted(imgFinal, 1, ImageInvWarp_ID, 1, 0)
-
-            #
-            # imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, ImageInvWarp_ID, 1, 0)
-            # imgFinal_ID = cv2.addWeighted(imgFinal_ID, 1, imgInvGradeDisplay, 1, 0)
 
         imgBlank = np.zeros_like(img)
         imageArray = (
@@ -290,17 +263,16 @@ while True:
     cv2.imshow("FinalResult", imgFinal)
     # cv2.imshow("Stacked Images", imageStacked)
     if cv2.waitKey(1) & 0xFF == ord('s'):
-
-            # get input values for id and score
-            # create a list of rows to append to the CSV file
+        # get input values for id and score
+        # create a list of rows to append to the CSV file
         rowsCSV = [
-                [str(myIndex_ID[0]) + str(myIndex_ID[1]) + str(myIndex_ID[2]) + str(myIndex_ID[3]) + str(myIndex_ID[4]),
-                 score]]
+            [str(myIndex_ID[0]) + str(myIndex_ID[1]) + str(myIndex_ID[2]) + str(myIndex_ID[3]) + str(myIndex_ID[4]),
+             score]]
 
-            # append the rows to the CSV file
+        # append the rows to the CSV file
         with open(file_path, 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerows(rowsCSV)
+            writer = csv.writer(f)
+            writer.writerows(rowsCSV)
 
         cv2.imwrite("FinalResult.jpg", imgFinal)
         cv2.waitKey(300)
