@@ -61,7 +61,7 @@ def rectCountour(countours):
 # we use this to get corner points :thumbsup:
 def getCornerPoints(cont):
     perimeter = cv2.arcLength(cont, True)
-    approximation = cv2.approxPolyDP(cont, 0.03 * perimeter, True)
+    approximation = cv2.approxPolyDP(cont, 0.02 * perimeter, True)
     return approximation
 
 
@@ -125,7 +125,7 @@ def showAnswers(img, myIndex, grading, ans, questions, choices):
             correctAns = ans[x]
             correctX = (correctAns * secW) + secW // 2  # finding the center value of the given box
             correctY = (x * secH) + secH // 2
-            cv2.circle(img, (correctX, correctY), 30, (0, 255, 0), cv2.FILLED)
+            cv2.circle(img, (correctX, correctY), 30, (255, 0, 0), cv2.FILLED)
 
         cv2.circle(img, (cX, cY), 50, myColor, cv2.FILLED)
 
